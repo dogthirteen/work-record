@@ -1,0 +1,26 @@
+{
+  "name": "work",
+  "version": "1.0.0",
+  "description": "记录日常开发中遇到的技术点以及解决方法",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "cz-conventional-changelog": "^3.1.0",
+    "git-cz": "^4.3.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://git.isecsp.com/she_li_wei/item-recond.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "keywords": []
+}
