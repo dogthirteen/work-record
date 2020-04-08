@@ -993,29 +993,185 @@ overflow: hidden;
 text-overflow: ellipsis;
 ```
 
-#### 28.规范git提交
+#### 28.小程序强制更新
 
 ```js
-
+//verionsUpdate.js
 /**
- * feat：新功能（feature）
- * fix：修补bug
- * docs：文档（documentation）
- * style： 格式（不影响代码运行的变动）
- * refactor：重构（即不是新增功能，也不是修改bug的代码变动）
- * test：增加测试
- * chore：构建过程或辅助工具的变动
-*/
+ * 下载小程序新版本并重启应用
+ */
+  const downLoadAndUpdate = (updateManager)=>{
+  wx.showLoading();
+  //静默下载更新小程序新版本
+  updateManager.onUpdateReady(function () {
+    wx.hideLoading()
+    //新的版本已经下载好，调用 applyUpdate 应用新版本并重启
+    updateManager.applyUpdate()
+  })
+  updateManager.onUpdateFailed(function () {
+    wx.hideLoading()
+    // 新的版本下载失败
+    wx.showModal({
+      title: '新版本更新异常',
+      content: '新版本更新出现异常，请按以下方式更新： ⒈请回到微信的"聊天列表"; ⒉下拉，找到当前小程序图标长按拖动删除; ⒊点击"发现"→"小程序"，顶部搜索"书籍审查入库工具",即可进入最新版本。',
+    })
+  })
+}
+const autoUpdate = () => {
+  // 获取小程序更新机制兼容
+  if (wx.canIUse('getUpdateManager')) {
+    const updateManager = wx.getUpdateManager()
+    //1. 检查小程序是否有新版本发布
+    updateManager.onCheckForUpdate(function(res) {
+      // 请求完新版本信息的回调
+      if (res.hasUpdate) {
+        //检测到新版本，需要更新，给出提示
+        wx.showModal({
+          title: '更新提示',
+          content: '检测到新版本，是否更新为最新版本并重启小程序？',
+          success: function (res) {
+            console.log(res);
+            if (res.confirm) {
+              //2. 用户确定下载更新小程序，小程序下载及更新静默进行
+              downLoadAndUpdate(updateManager)
+            } else if (res.cancel) {
+              //用户点击取消按钮的处理，如果需要强制更新，则给出二次弹窗，如果不需要，则这里的代码都可以删掉了
+              wx.showModal({
+                title: '温馨提示',
+                content: '本次版本更新涉及到新的功能添加，旧版本无法正常使用',
+                showCancel:false,//隐藏取消按钮
+                confirmText:"确定更新",//只保留确定更新按钮
+                success: function(res) {
+                  if (res.confirm) {
+                    //下载新版本，并重新应用
+                    downLoadAndUpdate(updateManager)
+                  }
+                }
+              })
+            }
+          }
+        })
+      }
+    })
+  } else {
+    // 如果希望用户在最新版本的客户端上体验您的小程序，可以这样子提示
+    wx.showModal({
+      title: '提示',
+      content: '当前微信版本过低，无法使用该功能，请升级到最新微信版本后重试。'
+    })
+  }
+}
 
-//1.全局安装commitizennode模块
-npm install -g commitizen
-
-//2.如果你的项目不是node项目,下面的内容可以直接忽略
-commitizen init cz-conventional-changelog --save --save-exact
-
-//3.此时可能会报找不到package.json的错误,使用下面命令来自动生成一个项目的package,然后在运行2中的命令.
-npm init --yes
+module.exports = autoUpdate
 ```
 
-![](C:\Users\user\Desktop\项目记录\image\git cz.png)
+#### 29. 小程序请求封装
+
+```js
+//request.js
+import regeneratorRuntime from '../lib/runtime/runtime'; //解决小程序使用promise报错的问题
+// 公共的url
+let token = '';
+var app = getApp();
+let baseUrl = app.globalData.baseUrl;
+
+function request(url, method, data, headers, param) {
+  if (headers) {
+    token = wx.getStorageSync('token');
+  }
+  return new Promise((resolve, reject) => {
+    // 显示正在等待
+    wx.showLoading({
+      title: '正在加载中',
+      mask: false
+    });
+    if (param) {
+      wx.request({
+        data,
+        method,
+        url: baseUrl + url + `?${param}`,
+        header: {
+          token: token
+        },
+        success: result => {
+          // 隐藏正在等待图标
+          setTimeout(() => {
+            wx.hideLoading();
+          },300);
+          if (result.statusCode == 401 || result.statusCode == 403) {
+            wx.showToast({
+              title: '登录验证已过期，请重新登录',
+              icon: 'none',
+              image: '',
+              duration: 1500,
+              mask: false,
+            });
+            wx.clearStorageSync();
+            setTimeout(() => {
+              wx.redirectTo({
+                url: '/pages/login/index',
+              });
+
+            }, 1500);
+          } else if (result.statusCode == 200 || result.statusCode == 204) {
+            resolve(result);
+          } else {
+            reject(result.data)
+          }
+        },
+        fail: err => {
+          // 隐藏正在等待图标
+          setTimeout(() => {
+            wx.hideLoading();
+          },300);
+          reject(err);
+        },
+      });
+    } else {
+      wx.request({
+        data,
+        method,
+        url: baseUrl + url,
+        header: {
+          token: token
+        },
+        success: result => {
+          // 隐藏正在等待图标
+          setTimeout(() => {
+            wx.hideLoading();
+          },300);
+          if (result.statusCode == 401 || result.statusCode == 403) {
+            wx.showToast({
+              title: '登录验证已过期，请重新登录',
+              icon: 'none',
+              image: '',
+              duration: 1500,
+              mask: false,
+            });
+            wx.clearStorageSync();
+            setTimeout(() => {
+              wx.redirectTo({
+                url: '/pages/login/index',
+              });
+            }, 1500);
+          } else if (result.statusCode == 200 || result.statusCode == 204) {
+            resolve(result);
+          } else {
+            reject(result.data)
+          }
+        },
+        fail: err => {
+          // 隐藏正在等待图标
+          setTimeout(() => {
+            wx.hideLoading();
+          },300);;
+          reject(err);
+        },
+      });
+    }
+
+  });
+}
+module.exports = request;
+```
 
