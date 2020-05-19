@@ -169,7 +169,8 @@ Simple（太简单，就一个index.html文件）、webpack-simple（比较实�
 #### 9.将数据以表格形式导出
 
 ```js
- // 将数据以表格形式导出导出
+// Blob.js  Export2Excel.js
+// 将数据以表格形式导出导出
     formatJson(filterVal, jsonData) {
       return jsonData.map(v => filterVal.map(j => v[j]));
     },
@@ -986,17 +987,16 @@ white-space: nowrap;
 text-overflow: ellipsis
 
 //多行省略
-word-break: break-all;
--webkit-box-orient: vertical;
--webkit-line-clamp: 2;
 overflow: hidden;
 text-overflow: ellipsis;
+display: -webkit-box;
+-webkit-box-orient: vertical;
+-webkit-line-clamp: 2
 ```
 
 #### 28.小程序强制更新
 
 ```js
-//verionsUpdate.js
 /**
  * 下载小程序新版本并重启应用
  */
@@ -1068,7 +1068,6 @@ module.exports = autoUpdate
 #### 29. 小程序请求封装
 
 ```js
-//request.js
 import regeneratorRuntime from '../lib/runtime/runtime'; //解决小程序使用promise报错的问题
 // 公共的url
 let token = '';
@@ -1173,5 +1172,31 @@ function request(url, method, data, headers, param) {
   });
 }
 module.exports = request;
+```
+
+#### 30. 根据所在ip地址获取所在地区名称
+
+```js
+const path = require('path');
+module.exports = () => {
+  const { IDC, City, District, BaseStation } = require('ipip-ipdb');
+  return async function parseAddress(ctx, next){
+    await next();
+    const city = new City(path.join(ctx.app.baseDir)+'/ipipfree.ipdb');
+    
+    var clientIP = ctx.ips.length > 0 ? ctx.ips[ctx.ips.length - 1] : ctx.ip;
+    clientIP = clientIP.replace('::ffff:','');
+    
+    const regionName = city.findInfo(clientIP, 'CN').regionName;
+
+    if(!ctx.session.manualRegionName){
+      if(regionName == '本机地址' || regionName == '局域网'){
+        ctx.session.regionName = '全国';
+      }else{
+        ctx.session.regionName = regionName;
+      }
+    }
+  }
+};
 ```
 
