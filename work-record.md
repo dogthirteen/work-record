@@ -474,7 +474,7 @@ beforeUpload(file) {
 #### 19.elementUI 表格单元格合并
 
 ```js
-zai  el-table中新增属性 :span-method="objectSpanMethod"
+ 在 el-table中新增属性 :span-method="objectSpanMethod"
 //获取数据的方法内
 		  this.spanArr = [];
           let pos,position = null
